@@ -55,15 +55,34 @@ graph TB
 
 ## Prerequisites
 
-- **AWS Account** with appropriate permissions (or admin access for initial setup)
-- **AWS CLI** configured with credentials (`aws configure`)
-- **Python 3.10+** installed
-- **Terraform 1.0+** (for infrastructure provisioning)
+- **AWS Account** with IAM permissions to create roles, S3 buckets, and SageMaker resources
+- **AWS CLI** installed and configured with your credentials (`aws configure`)
+- **Python 3.10+** installed locally
+- **Terraform 1.0+** installed locally
 - **Git** for cloning this repository
 
-## Quick Start
+## Run Against Your AWS Account
 
-### 1. Clone and Install
+### Step 0: Verify Your Setup
+
+Your AWS CLI credentials will be used to run Terraform and create a separate SageMaker execution role. Ensure:
+
+```bash
+# Check AWS CLI is configured
+aws sts get-caller-identity
+
+# Verify your default region (must match terraform and config.yaml)
+aws configure get region
+```
+
+**CRITICAL**: Note your AWS region. You must use the same region in:
+1. AWS CLI default region (`aws configure get region`)
+2. Terraform variables (`infra/terraform.tfvars` or CLI default)
+3. Pipeline configuration (`config/config.yaml`)
+
+Region mismatch is the most common setup failure.
+
+### Step 1: Clone and Set Up Python Environment
 
 ```bash
 git clone https://github.com/saranreddy/sagemaker-mlops-pipeline-starter.git
@@ -77,7 +96,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Provision AWS Infrastructure
+### Step 2: Provision AWS Infrastructure with Terraform
 
 ```bash
 cd infra
@@ -85,55 +104,144 @@ cd infra
 # Initialize Terraform
 terraform init
 
-# Review planned changes
+# (Optional) Customize region or names
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars if you want non-default values
+
+# Review planned resources
 terraform plan
 
-# Apply infrastructure (creates IAM role, S3 bucket, Model Registry)
+# Create resources (type 'yes' when prompted)
 terraform apply
+```
 
-# Save outputs for configuration
+Terraform creates:
+- S3 bucket (with versioning and encryption)
+- IAM execution role for SageMaker (least-privilege permissions)
+- Model Package Group for Model Registry
+
+**Save the outputs**:
+
+```bash
 terraform output
 ```
 
-**Note the outputs**: You'll need `sagemaker_role_arn` and `s3_bucket_name` for the next step.
+Copy the displayed `sagemaker_role_arn` and `s3_bucket_name` for the next step.
 
-### 3. Configure Pipeline
+### Step 3: Configure the Pipeline
 
 ```bash
 cd ..
 cp config/config.example.yaml config/config.yaml
-
-# Edit config/config.yaml with your values from Terraform outputs:
-# - aws_region: your AWS region (e.g., us-east-1)
-# - sagemaker_role_arn: from terraform output sagemaker_role_arn
-# - s3_bucket: from terraform output s3_bucket_name
 ```
 
-### 4. Create and Run Pipeline
+Edit `config/config.yaml` with values from Terraform:
+
+```yaml
+aws_region: us-east-1  # MUST match your AWS CLI region
+sagemaker_role_arn: arn:aws:iam::YOUR_ACCOUNT_ID:role/sagemaker-mlops-execution-role
+s3_bucket: sagemaker-mlops-artifacts-YOUR_ACCOUNT_ID
+```
+
+**Do not** leave placeholder values like `123456789012`. The scripts validate and will reject them.
+
+### Step 4: Create the Pipeline Definition
 
 ```bash
-# Create or update the pipeline definition in SageMaker
+# Upsert (create or update) the pipeline in SageMaker
 python scripts/upsert_pipeline.py
+```
 
-# Start a pipeline execution
+This defines the pipeline in SageMaker but does not execute it.
+
+### Step 5: Start a Pipeline Execution
+
+```bash
+# Start the pipeline
 python scripts/start_pipeline.py
 ```
 
-**Monitor progress**: Go to AWS Console → SageMaker → Pipelines → `california-housing-pipeline`
+The script will print an execution ARN and ID. Monitor progress in the AWS Console:
 
-### 5. Deploy Model (After Pipeline Completes)
+1. Navigate to **SageMaker → Pipelines** in the AWS Console
+2. Select `california-housing-pipeline`
+3. View the execution (typically takes 8-12 minutes)
+
+Alternatively, use the AWS CLI:
 
 ```bash
-# Deploy the latest model to a real-time endpoint
-# Note: You may need to manually approve the model in Model Registry first
+aws sagemaker list-pipeline-executions \
+  --pipeline-name california-housing-pipeline \
+  --region us-east-1
+```
+
+### Step 6: Approve the Model (Required for Deployment)
+
+After the pipeline completes successfully, the model will be in `PendingManualApproval` status. You must approve it:
+
+1. Go to **SageMaker → Model Registry** in the AWS Console
+2. Select `california-housing-models`
+3. Click on the latest model version
+4. Click **Update status** → **Approve**
+
+### Step 7: Deploy the Model to an Endpoint
+
+```bash
+# Deploy the approved model to a real-time endpoint
 python scripts/deploy_model.py
 ```
 
-The deployment script will:
-1. Find the latest approved (or pending approval) model package
-2. Create a SageMaker model
-3. Create an endpoint configuration
-4. Create or update a real-time inference endpoint
+The script will:
+1. Find the latest approved model package (falls back to `PendingManualApproval` if no approved model)
+2. Create a SageMaker Model resource
+3. Create an Endpoint Configuration
+4. Create or update the `california-housing-endpoint`
+
+Endpoint deployment takes 5-10 minutes. You can monitor:
+
+```bash
+aws sagemaker describe-endpoint \
+  --endpoint-name california-housing-endpoint \
+  --region us-east-1
+```
+
+### Step 8: (Optional) Test the Endpoint
+
+```bash
+# Example inference with AWS CLI
+aws sagemaker-runtime invoke-endpoint \
+  --endpoint-name california-housing-endpoint \
+  --content-type text/csv \
+  --body "8.3252,41.0,6.984126984126984,1.0238095238095237,322.0,2.5555555555555554,37.88,-122.23" \
+  --region us-east-1 \
+  output.json
+
+cat output.json
+```
+
+### Step 9: Clean Up Resources
+
+To avoid ongoing charges:
+
+```bash
+# 1. Delete the endpoint (most important - charges per hour)
+aws sagemaker delete-endpoint --endpoint-name california-housing-endpoint --region us-east-1
+
+# 2. Wait for endpoint deletion, then delete endpoint config
+aws sagemaker delete-endpoint-config --endpoint-config-name <config-name> --region us-east-1
+
+# 3. Delete the model
+aws sagemaker delete-model --model-name <model-name> --region us-east-1
+
+# 4. Destroy Terraform-managed resources
+cd infra
+terraform destroy  # Type 'yes' when prompted
+
+# 5. (Optional) Delete old pipeline executions' artifacts from S3
+aws s3 rm s3://YOUR-BUCKET/california-housing-pipeline/ --recursive --region us-east-1
+```
+
+**Note**: Endpoint charges (~$0.06/hour for `ml.t2.medium`) accrue while the endpoint exists. Always delete it when not in use.
 
 ## Project Structure
 
@@ -211,51 +319,108 @@ The deployment script will:
 
 ## Configuration Options
 
-Edit `config/config.yaml` to customize:
+Edit `config/config.yaml` to customize pipeline behavior:
 
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `aws_region` | AWS region for resources | `us-east-1` |
-| `sagemaker_role_arn` | IAM role ARN for SageMaker | Required (from Terraform) |
-| `s3_bucket` | S3 bucket for artifacts | Required (from Terraform) |
-| `pipeline_name` | Pipeline name | `california-housing-pipeline` |
-| `model_package_group_name` | Model Registry group | `california-housing-models` |
+| Parameter | Description | Source/Default |
+|-----------|-------------|----------------|
+| `aws_region` | AWS region (**must match AWS CLI and Terraform**) | Required (manual) |
+| `sagemaker_role_arn` | IAM role ARN for SageMaker | Required (from `terraform output`) |
+| `s3_bucket` | S3 bucket for artifacts | Required (from `terraform output`) |
+| `pipeline_name` | Pipeline name in SageMaker | `california-housing-pipeline` |
+| `model_package_group_name` | Model Registry group name | `california-housing-models` |
 | `instance_type` | Training instance type | `ml.m5.xlarge` |
 | `instance_count` | Number of training instances | `1` |
-| `mse_threshold` | MSE threshold for registration | `0.5` |
+| `mse_threshold` | MSE threshold for model registration | `0.5` |
+| `endpoint_name` | Endpoint name for deployment | `california-housing-endpoint` |
 | `endpoint_instance_type` | Endpoint instance type | `ml.t2.medium` |
+| `endpoint_instance_count` | Endpoint instance count | `1` |
+
+**Note**: `framework_version` (`1.7-1`) refers to the XGBoost framework version used by SageMaker.
+
+## Common Failure Modes
+
+### 1. Missing or Invalid `config/config.yaml`
+
+**Error**: `FileNotFoundError: Config file not found: config/config.yaml`
+
+**Fix**: Copy the example config and populate with your Terraform outputs:
+
+```bash
+cp config/config.example.yaml config/config.yaml
+# Edit config.yaml with values from: terraform output
+```
+
+### 2. Placeholder Values in Configuration
+
+**Error**: `ValueError: Please update the SageMaker role ARN in config.yaml with your actual AWS account ID`
+
+**Fix**: Replace `123456789012` with real values from `terraform output`. The scripts validate configs and reject placeholder account IDs.
+
+### 3. Region Mismatch
+
+**Error**: `ResourceNotFoundException` or `AccessDeniedException` when running scripts
+
+**Fix**: Ensure the same region everywhere:
+
+```bash
+# Check AWS CLI default region
+aws configure get region
+
+# Check terraform region (infra/terraform.tfvars or infra/variables.tf default)
+grep aws_region infra/terraform.tfvars
+
+# Check config.yaml
+grep aws_region config/config.yaml
+```
+
+All three must match.
+
+### 4. Model Stuck in `PendingManualApproval`
+
+**Error**: `deploy_model.py` finds a model but deployment later fails, or no approved models exist
+
+**Fix**: Models registered by the pipeline require manual approval:
+
+1. Go to **SageMaker → Model Registry** → `california-housing-models`
+2. Click the model version
+3. **Update status** → **Approve**
+
+Then re-run `python scripts/deploy_model.py`.
+
+### 5. Insufficient IAM Permissions for Terraform
+
+**Error**: `AccessDenied` when running `terraform apply`
+
+**Fix**: Your AWS CLI user/role needs permissions to create IAM roles, S3 buckets, and SageMaker resources. Grant `IAMFullAccess`, `AmazonS3FullAccess`, and `AmazonSageMakerFullAccess` (or admin for initial setup).
+
+### 6. SageMaker Role Missing Permissions
+
+**Error**: Pipeline steps fail with `AccessDenied` in CloudWatch logs
+
+**Fix**: This should not happen with Terraform-created roles. If customizing IAM, ensure the SageMaker execution role has S3, ECR, CloudWatch, and SageMaker permissions (see `infra/iam.tf`).
 
 ## Cost Considerations
 
-Running this pipeline incurs AWS costs. Typical costs per execution (us-east-1):
+Running this pipeline incurs AWS costs. Typical costs per execution (us-east-1, California Housing dataset):
 
 - **Processing**: ml.m5.xlarge ~$0.02 (1-2 minutes)
-- **Training**: ml.m5.xlarge ~$0.05 (5 minutes with California Housing)
+- **Training**: ml.m5.xlarge ~$0.05 (5 minutes)
 - **Evaluation**: ml.m5.xlarge ~$0.01 (1 minute)
-- **Endpoint**: ml.t2.medium ~$0.06/hour (while running)
-- **S3 storage**: Negligible for this dataset
+- **S3 storage**: <$0.01 for artifacts
+- **Endpoint (if deployed)**: ml.t2.medium ~$0.06/hour while running
 
-**Total per run**: ~$0.10 (plus endpoint costs if deployed)
+**Total per pipeline run**: ~$0.10 (one-time)  
+**Total per month with endpoint**: ~$43.20 (if endpoint left running 24/7)
 
-### Cost Management
+### Minimizing Costs
 
-1. **Delete endpoint when not in use**:
-   ```bash
-   aws sagemaker delete-endpoint --endpoint-name california-housing-endpoint --region us-east-1
-   ```
+Endpoints are the primary ongoing cost. Delete them immediately when not needed:
 
-2. **Stop pipeline executions** if unwanted runs start
+```bash
+aws sagemaker delete-endpoint --endpoint-name california-housing-endpoint --region us-east-1
+```
 
-3. **Clean up old model artifacts** from S3:
-   ```bash
-   aws s3 rm s3://YOUR-BUCKET/california-housing-pipeline/ --recursive
-   ```
-
-4. **Destroy infrastructure** when done:
-   ```bash
-   cd infra
-   terraform destroy
-   ```
+Pipeline execution costs are one-time per run. The infrastructure resources (S3, IAM, Model Registry) have no hourly charges.
 
 ## Development
 
@@ -286,26 +451,14 @@ terraform validate
 
 ## Troubleshooting
 
-### Common Issues
+For detailed failure modes, see the [Common Failure Modes](#common-failure-modes) section above.
 
-1. **"Role ARN contains 123456789012"**
-   - You need to run `terraform apply` first and update `config/config.yaml` with real values
+Additional debugging tips:
 
-2. **"No model packages found"**
-   - Pipeline hasn't completed yet, or model didn't pass threshold
-   - Check SageMaker Console → Pipelines for execution status
-
-3. **"Access Denied" errors**
-   - Ensure your AWS credentials have sufficient permissions
-   - Check that the Terraform-created IAM role has necessary policies
-
-4. **Pipeline step failures**
-   - Check CloudWatch Logs: `/aws/sagemaker/ProcessingJobs`, `/aws/sagemaker/TrainingJobs`
-   - Verify S3 bucket exists and role has access
-
-5. **Import errors when running scripts**
-   - Ensure you're in the repository root directory
-   - Activate virtual environment: `source venv/bin/activate`
+- **Pipeline step failures**: Check CloudWatch Logs at `/aws/sagemaker/ProcessingJobs` and `/aws/sagemaker/TrainingJobs`
+- **Import errors**: Ensure you're in the repository root and the venv is activated (`source venv/bin/activate`)
+- **Endpoint errors**: Check `aws sagemaker describe-endpoint --endpoint-name california-housing-endpoint --region us-east-1`
+- **Terraform state conflicts**: If working with a team, consider using a remote backend (S3 + DynamoDB)
 
 ## Customization Guide
 

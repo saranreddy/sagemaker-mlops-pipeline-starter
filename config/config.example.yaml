@@ -1,5 +1,9 @@
 # AWS Configuration
+# IMPORTANT: aws_region must match your AWS CLI default region (`aws configure get region`)
+# and the Terraform region (infra/terraform.tfvars or default in infra/variables.tf)
 aws_region: us-east-1
+
+# Replace these with outputs from `terraform output` after running `terraform apply` in infra/
 sagemaker_role_arn: arn:aws:iam::123456789012:role/SageMakerExecutionRole
 s3_bucket: sagemaker-mlops-artifacts-123456789012
 
