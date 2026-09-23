@@ -1,6 +1,6 @@
 """Tests for pipeline construction."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
@@ -23,6 +23,17 @@ def mock_config():
     }
 
 
+def configure_session_mocks(mock_pipeline_session_cls, mock_session_cls):
+    """Configure session mocks with proper sagemaker_config."""
+    mock_pipeline_session_instance = MagicMock()
+    type(mock_pipeline_session_instance).sagemaker_config = PropertyMock(return_value={})
+    mock_pipeline_session_cls.return_value = mock_pipeline_session_instance
+
+    mock_session_instance = MagicMock()
+    type(mock_session_instance).sagemaker_config = PropertyMock(return_value={})
+    mock_session_cls.return_value = mock_session_instance
+
+
 @patch("src.pipeline.pipeline.boto3.Session")
 @patch("src.pipeline.pipeline.sagemaker.Session")
 @patch("src.pipeline.pipeline.PipelineSession")
@@ -30,6 +41,7 @@ def mock_config():
 def test_pipeline_initialization(mock_retrieve, mock_pipeline_session, mock_session, mock_boto_session, mock_config):
     """Test pipeline initialization."""
     mock_retrieve.return_value = "mock-image-uri"
+    configure_session_mocks(mock_pipeline_session, mock_session)
 
     pipeline = CaliforniaHousingPipeline(mock_config)
 
@@ -47,6 +59,7 @@ def test_pipeline_initialization(mock_retrieve, mock_pipeline_session, mock_sess
 def test_create_parameters(mock_retrieve, mock_pipeline_session, mock_session, mock_boto_session, mock_config):
     """Test pipeline parameter creation."""
     mock_retrieve.return_value = "mock-image-uri"
+    configure_session_mocks(mock_pipeline_session, mock_session)
 
     pipeline = CaliforniaHousingPipeline(mock_config)
     parameters = pipeline.create_parameters()
@@ -66,6 +79,8 @@ def test_create_pipeline(
 ):
     """Test complete pipeline creation."""
     mock_retrieve.return_value = "mock-image-uri"
+    configure_session_mocks(mock_pipeline_session, mock_session)
+
     mock_pipeline_instance = MagicMock()
     mock_pipeline_cls.return_value = mock_pipeline_instance
 
