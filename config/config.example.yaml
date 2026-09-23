@@ -1,0 +1,22 @@
+# AWS Configuration
+aws_region: us-east-1
+sagemaker_role_arn: arn:aws:iam::123456789012:role/SageMakerExecutionRole
+s3_bucket: sagemaker-mlops-artifacts-123456789012
+
+# Pipeline Configuration
+pipeline_name: california-housing-pipeline
+model_package_group_name: california-housing-models
+
+# Model Configuration
+instance_type: ml.m5.xlarge
+instance_count: 1
+framework_version: "1.7-1"
+
+# Evaluation Thresholds
+mse_threshold: 0.5
+deploy_model: true
+
+# Endpoint Configuration
+endpoint_name: california-housing-endpoint
+endpoint_instance_type: ml.t2.medium
+endpoint_instance_count: 1

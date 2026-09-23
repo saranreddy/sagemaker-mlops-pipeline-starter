@@ -1,0 +1,7 @@
+# Example terraform.tfvars file
+# Copy this file to terraform.tfvars and customize the values
+
+# aws_region = "us-east-1"
+# project_name = "sagemaker-mlops"
+# pipeline_name = "california-housing-pipeline"
+# model_package_group_name = "california-housing-models"

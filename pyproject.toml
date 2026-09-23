@@ -1,0 +1,82 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sagemaker-mlops-pipeline"
+version = "1.0.0"
+description = "Professional AWS SageMaker MLOps pipeline starter"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Saran Alla", email = "saran@example.com"}
+]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "sagemaker>=2.226.0",
+    "boto3>=1.34.144",
+    "botocore>=1.34.144",
+    "scikit-learn>=1.5.1",
+    "pandas>=2.2.2",
+    "numpy>=1.26.4",
+    "xgboost>=2.1.0",
+    "PyYAML>=6.0.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.2",
+    "moto>=5.0.11",
+    "flake8>=7.0.0",
+    "black>=24.0.0",
+    "isort>=5.13.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/saranreddy/sagemaker-mlops-pipeline-starter"
+Repository = "https://github.com/saranreddy/sagemaker-mlops-pipeline-starter"
+Issues = "https://github.com/saranreddy/sagemaker-mlops-pipeline-starter/issues"
+
+[tool.black]
+line-length = 120
+target-version = ['py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 120
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
