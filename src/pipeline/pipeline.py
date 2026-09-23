@@ -1,30 +1,31 @@
 """
 SageMaker Pipeline definition for California Housing price prediction.
 """
+
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 import boto3
 import sagemaker
 from sagemaker.estimator import Estimator
 from sagemaker.inputs import TrainingInput
+from sagemaker.model import Model
 from sagemaker.model_metrics import MetricsSource, ModelMetrics
 from sagemaker.processing import ProcessingInput, ProcessingOutput, ScriptProcessor
 from sagemaker.sklearn.processing import SKLearnProcessor
-from sagemaker.workflow.conditions import ConditionLessThanOrEqualTo
 from sagemaker.workflow.condition_step import ConditionStep
+from sagemaker.workflow.conditions import ConditionLessThanOrEqualTo
 from sagemaker.workflow.functions import JsonGet
+from sagemaker.workflow.model_step import ModelStep
 from sagemaker.workflow.parameters import (
     ParameterFloat,
     ParameterInteger,
     ParameterString,
 )
 from sagemaker.workflow.pipeline import Pipeline
+from sagemaker.workflow.pipeline_context import PipelineSession
 from sagemaker.workflow.properties import PropertyFile
 from sagemaker.workflow.steps import ProcessingStep, TrainingStep
-from sagemaker.workflow.model_step import ModelStep
-from sagemaker.model import Model
-from sagemaker.workflow.pipeline_context import PipelineSession
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

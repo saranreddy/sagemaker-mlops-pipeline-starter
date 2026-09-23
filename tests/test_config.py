@@ -1,4 +1,5 @@
 """Tests for pipeline configuration."""
+
 import os
 import tempfile
 from pathlib import Path

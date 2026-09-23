@@ -1,6 +1,7 @@
 """
 Training script for XGBoost model on California Housing dataset.
 """
+
 import argparse
 import json
 import logging

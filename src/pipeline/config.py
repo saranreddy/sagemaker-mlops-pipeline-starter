@@ -1,7 +1,8 @@
 """Configuration utilities for SageMaker Pipeline."""
+
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
 
 import yaml
 

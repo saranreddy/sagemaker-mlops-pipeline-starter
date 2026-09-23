@@ -2,6 +2,7 @@
 """
 Script to upsert (create or update) the SageMaker Pipeline.
 """
+
 import argparse
 import logging
 import sys

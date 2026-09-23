@@ -2,6 +2,7 @@
 """
 Script to deploy a model from the Model Registry to a real-time endpoint.
 """
+
 import argparse
 import logging
 import sys

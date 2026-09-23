@@ -2,6 +2,7 @@
 Data preprocessing script for California Housing dataset.
 Splits data into train, validation, and test sets.
 """
+
 import argparse
 import logging
 import os
@@ -31,9 +32,7 @@ def main():
     logger.info(f"Target shape: {y.shape}")
 
     logger.info("Splitting data into train, validation, and test sets...")
-    X_temp, X_test, y_temp, y_test = train_test_split(
-        X, y, test_size=args.test_size, random_state=args.random_state
-    )
+    X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=args.test_size, random_state=args.random_state)
 
     val_size_adjusted = args.validation_size / (1 - args.test_size)
     X_train, X_val, y_train, y_val = train_test_split(

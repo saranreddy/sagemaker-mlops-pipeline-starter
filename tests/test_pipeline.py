@@ -1,4 +1,5 @@
 """Tests for pipeline construction."""
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -60,7 +61,9 @@ def test_create_parameters(mock_retrieve, mock_pipeline_session, mock_session, m
 @patch("src.pipeline.pipeline.PipelineSession")
 @patch("src.pipeline.pipeline.sagemaker.image_uris.retrieve")
 @patch("src.pipeline.pipeline.Pipeline")
-def test_create_pipeline(mock_pipeline_cls, mock_retrieve, mock_pipeline_session, mock_session, mock_boto_session, mock_config):
+def test_create_pipeline(
+    mock_pipeline_cls, mock_retrieve, mock_pipeline_session, mock_session, mock_boto_session, mock_config
+):
     """Test complete pipeline creation."""
     mock_retrieve.return_value = "mock-image-uri"
     mock_pipeline_instance = MagicMock()
