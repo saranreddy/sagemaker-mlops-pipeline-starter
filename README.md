@@ -8,6 +8,30 @@ A production-ready AWS SageMaker MLOps pipeline starter for end-to-end machine l
 
 Built with best practices for clarity, maintainability, and professional MLOps engineering.
 
+## Who This Is For
+
+This starter is for teams moving from notebooks to repeatable, auditable ML pipelines on AWS.
+
+**Good fit when you need:**
+- Scheduled retraining on tabular data with lineage tracking
+- Manual approval gates before model deployment (common in regulated industries)
+- A reference architecture for standardizing ML projects across your organization
+- Model Registry integration with automated promotion workflows
+- Terraform-managed infrastructure for reproducible AWS setups
+
+**Common in these contexts:**
+- Fintech, insurance, and e-commerce teams on AWS with compliance or audit requirements
+- Platform/MLOps engineers setting up a team's first production pipeline on SageMaker
+- ML engineers or data scientists graduating from notebooks to automated retraining
+
+**Not a good fit for:**
+- One-off experiments or exploratory analysis (a notebook is simpler and faster)
+- Teams standardized on other platforms (Databricks, Vertex AI, Kubeflow)
+- LLM or GenAI serving workloads (consider [Amazon Bedrock](https://aws.amazon.com/bedrock/) or SageMaker JumpStart instead)
+- Real-time feature stores or streaming training (this starter uses batch processing)
+
+**After deployment**: Model monitoring is a separate concern. See the companion [saranreddy/sagemaker-model-monitor-starter](https://github.com/saranreddy/sagemaker-model-monitor-starter) for tracking drift, data quality, and performance degradation in production.
+
 ## Features
 
 - **Complete SageMaker Pipeline** with data processing, training (XGBoost), evaluation, conditional registration, and deployment
