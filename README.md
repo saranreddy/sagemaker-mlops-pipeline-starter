@@ -30,7 +30,7 @@ This starter is for teams moving from notebooks to repeatable, auditable ML pipe
 - LLM or GenAI serving workloads (consider [Amazon Bedrock](https://aws.amazon.com/bedrock/) or SageMaker JumpStart instead)
 - Real-time feature stores or streaming training (this starter uses batch processing)
 
-**After deployment**: Model monitoring is a separate concern. See the companion [saranreddy/sagemaker-model-monitor-starter](https://github.com/saranreddy/sagemaker-model-monitor-starter) for tracking drift, data quality, and performance degradation in production.
+**After deployment**: Model monitoring is a separate concern. See the companion [saranreddy/sagemaker-model-monitor-starter](https://github.com/saranreddy/sagemaker-model-monitor-starter) for data-quality monitoring (baselines plus scheduled checks that catch input drift and schema changes) in production.
 
 ## Features
 
