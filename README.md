@@ -44,38 +44,9 @@ This starter is for teams moving from notebooks to repeatable, auditable ML pipe
 
 ## Architecture
 
-```mermaid
-graph TB
-    subgraph "SageMaker Pipeline"
-        A[Start] --> B[Processing Step]
-        B -->|Train/Val/Test CSV| C[Training Step]
-        C -->|Model Artifacts| D[Evaluation Step]
-        D -->|evaluation.json| E{MSE < Threshold?}
-        E -->|Yes| F[Register Model]
-        E -->|No| G[End - No Registration]
-        F --> H[Model Registry]
-    end
-    
-    subgraph "Manual Deployment"
-        H -->|Approved Model| I[Create Endpoint Config]
-        I --> J[Deploy to Endpoint]
-        J --> K[Real-time Inference]
-    end
-    
-    subgraph "AWS Resources"
-        L[S3 Bucket]
-        M[IAM Role]
-        N[Model Package Group]
-    end
-    
-    B -.-> L
-    C -.-> L
-    D -.-> L
-    B -.-> M
-    C -.-> M
-    D -.-> M
-    F -.-> N
-```
+![AWS Architecture Diagram for SageMaker MLOps Pipeline Starter](docs/architecture.png)
+
+*Diagram generated from `docs/architecture.py` (requires `pip install diagrams` and Graphviz; run `python docs/architecture.py` to regenerate `architecture.png` in the same directory)*
 
 ## Prerequisites
 
